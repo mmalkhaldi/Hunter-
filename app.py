@@ -14,7 +14,7 @@ app = Flask(__name__)
 # ==========================================
 TELEGRAM_TOKEN = "9148905124:AAGt8y6NoMdzGRfsnQIwVEq5kI0neVLA3t0"
 TELEGRAM_CHAT_ID = "5490419100"
-FINNHUB_API_KEY = "dbgkdo9r01qj6jgof16g"
+FINNHUB_API_KEY = "dbguue9r01qjpoc3bgog"
 
 FINVIZ_URL = "https://elite.finviz.com/screener/stocks?ft=3&f=sh_price_u10%2Csh_avgvol_o1000%2Ccap_small%2Cta_rsi_50to65%2Cta_sma20_pa%2Csh_relvol_o3"
 
