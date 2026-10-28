@@ -10,11 +10,11 @@ import os
 app = Flask(__name__)
 
 # ==========================================
-# 1. الإعدادات الأساسية
+# 1. الإعدادات الأساسية (تم تحديث المفتاح)
 # ==========================================
 TELEGRAM_TOKEN = "9148905124:AAGt8y6NoMdzGRfsnQIwVEq5kI0neVLA3t0"
 TELEGRAM_CHAT_ID = "5490419100"
-FINNHUB_API_KEY = "dbguue9r01qjpoc3bgog"
+FINNHUB_API_KEY = "dbguue9r01qjpoc3bgog" # المفتاح الجديد الصحيح
 
 FINVIZ_URL = "https://elite.finviz.com/screener/stocks?ft=3&f=sh_price_u10%2Csh_avgvol_o1000%2Ccap_small%2Cta_rsi_50to65%2Cta_sma20_pa%2Csh_relvol_o3"
 
@@ -26,7 +26,7 @@ def send_telegram_alert(message):
     try:
         requests.post(url, json=payload)
     except Exception as e:
-        print(f"Telegram Error: {e}")
+        print(f"Telegram Error: {e}", flush=True)
 
 def get_finviz_tickers():
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
@@ -39,14 +39,15 @@ def get_finviz_tickers():
         return []
 
 def scan_and_alert():
-    print(f"\n⏳ [{datetime.now().strftime('%H:%M:%S')}] جاري فحص Finviz...")
+    # flush=True عشان السجل يظهر في Render غصباً
+    print(f"\n⏳ [{datetime.now().strftime('%H:%M:%S')}] جاري فحص Finviz...", flush=True)
     tickers = get_finviz_tickers()
     
     if not tickers:
-        print("⚠️ لا توجد أسهم في الفلتر حالياً.")
+        print("⚠️ لا توجد أسهم في الفلتر حالياً.", flush=True)
         return
 
-    print(f"🎯 تم العثور على {len(tickers)} سهم. جاري جلب الأسعار...")
+    print(f"🎯 تم العثور على {len(tickers)} سهم. جاري جلب الأسعار...", flush=True)
     
     for ticker in tickers:
         try:
@@ -77,26 +78,25 @@ def scan_and_alert():
                 f"🎯 <b>هدف 2:</b> ${target_2:.2f}\n"
                 f"⚠️ <i>تأكد من السيولة والشارت قبل الدخول.</i>"
             )
-            print(f"✅ تم إرسال {ticker}")
+            print(f"✅ تم إرسال {ticker}", flush=True)
             send_telegram_alert(alert_msg)
-        except:
-            pass
+        except Exception as e:
+            print(f"Error processing {ticker}: {e}", flush=True)
 
-# دالة التشغيل في الخلفية
 def run_bot():
+    # نرسل رسالة تأكيد أول ما يشتغل البوت
+    send_telegram_alert("🚀 <b>تم تشغيل السيرفر بنجاح!</b>\nالبوت بدأ بفحص الأسهم الآن...")
+    
     while True:
         scan_and_alert()
         time.sleep(300) 
 
-# مسار وهمي عشان السيرفر يفتكرنا موقع ويب
 @app.route('/')
 def home():
     return "Beast Scanner is Running 24/7!"
 
 if __name__ == "__main__":
-    # تشغيل البوت في الخلفية
     t = threading.Thread(target=run_bot)
     t.start()
-    # تشغيل السيرفر
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
