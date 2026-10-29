@@ -13,10 +13,9 @@ app = Flask(__name__)
 # ==========================================
 # 1. الإعدادات الأساسية (تقرأ من Render بأمان)
 # ==========================================
-# هنا الكود راح ياخذ التوكن من إعدادات Render، وإذا ما لقاه راح يستخدم القيمة الافتراضية
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "9148905124:AAFaIdWGovgNHjGQRXXjH2-PIoXBpgX8Fxk")
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "9148905124:AAGIuJ7ZbI4LSaVVtFpnboVwXXB3zNd2CNg")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "5490419100")
-FINNHUB_API_KEY = "dbguue9r01qjpoc3bgog"
+FINNHUB_API_KEY = os.environ.get("FINNHUB_API_KEY", "dbguue9r01qjpoc3bgogdbguue9r01qjpoc3bgp0")
 
 FINVIZ_URL = "https://elite.finviz.com/screener/stocks?f=sh_price_u15%2Csh_avgvol_o500%2Csh_float_u50%2Csh_relvol_o2%2Ccap_small%2Cta_rsi_50to65%2Cta_sma20_pa"
 
@@ -91,7 +90,7 @@ def scan_and_alert():
 
 def run_bot():
     print("🔥 Starting Bot Thread...", file=sys.stderr, flush=True)
-    send_telegram_alert("🚀 <b>تم تشغيل السيرفر بنجاح (بالتوكن الآمن)!</b>\nالبوت بدأ بفحص الأسهم الآن...")
+    send_telegram_alert("🚀 <b>تم تشغيل السيرفر بنجاح (بالمفتاح الجديد)!</b>\nالبوت بدأ بفحص الأسهم الآن...")
     
     while True:
         scan_and_alert()
