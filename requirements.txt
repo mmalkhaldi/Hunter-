@@ -3,3 +3,4 @@ requests
 beautifulsoup4
 finnhub-python
 yfinance
+finvizfinance
