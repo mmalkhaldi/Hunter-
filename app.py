@@ -11,16 +11,15 @@ import sys
 app = Flask(__name__)
 
 # ==========================================
-# 1. الإعدادات الأساسية
+# 1. الإعدادات الأساسية (تقرأ من Render بأمان)
 # ==========================================
-TELEGRAM_TOKEN = "9148905124:AAGt8y6NoMdzGRfsnQIwVEq5kI0neVLA3t0"
-TELEGRAM_CHAT_ID = "5490419100"
+# هنا الكود راح ياخذ التوكن من إعدادات Render، وإذا ما لقاه راح يستخدم القيمة الافتراضية
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "9148905124:AAFaIdWGovgNHjGQRXXjH2-PIoXBpgX8Fxk")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "5490419100")
 FINNHUB_API_KEY = "dbguue9r01qjpoc3bgog"
 
-# ⚠️ تم تحديث الرابط هنا بناءً على صورتك الجديدة
 FINVIZ_URL = "https://elite.finviz.com/screener/stocks?f=sh_price_u15%2Csh_avgvol_o500%2Csh_float_u50%2Csh_relvol_o2%2Ccap_small%2Cta_rsi_50to65%2Cta_sma20_pa"
 
-# الكوكيز حقك
 COOKIE_STRING = "chartsTheme=dark; finviz_ab=registerElitePromo%3A0%3B0%3B1775299530; survey_dialog_cohort=0; finviz_t=f7328276-944f-4a19-ae54-2778ef0dc0dd; __qca=P1-ffb969d4-a870-4358-8cea-dc4ecf9fabf6; _ga=GA1.1.1943187939.1775299561; __cc_id=b52a83dd4d346e719b38a9bad3d7a581; insiderTradingUrl=tc%3D7; cto_bidid=MN3lG190TnVBTW8lMKZjWHoaGU3TFNHD0hZCuyR1dTZQUXMGtlWHDViuyRhVbhSaVvPMzhyT2pvUW52VUQ1dkxKJTJCJTGbnI2aXh6TSuyQMzZcllC2padnNFEUlMkYxeVdvOTBsNXHQcng4ZGN0aHL3OvG2T0jBJTNTR; .AspNetCore.Session=CfDJ8K%2BNWRTf4lNlgLm2TjEMMTS1IaRSVbDzwgdNnZqn%2BoCM2CEVIkx%2BnaNoz89jm1H1AVjG1%2BEPOP3YweSXOCQLDve9v56g%2BE37bZ%2FF9%2B2Bdna23F8Saxr3DHr4xDjy8Z52t08Duth6RLrjr3%2FrJH%2FoAk8A31m%2BJaWxocKwrf6pPnDceUBn; .ASPXAUTH=48BC2194BD546BB39F5A3FCC9B575C05884D6CD8186AF3A954E99602AC22934084F84BD0F3101F008AA6DF5F8CB15CC4B873231CB4264381CB1172E5CB38C1425A0D35FFCDB6644755B633DE2D7D9454FC206362DAFF8A25713C0ED0E010E98180E844720FEF7FF569421C74735FE195A6C361AF81EEA8707F25EE0E5FD7453458D0D01C52C7746C4F2CC8B90459F1BB60B17ADA7DADB96997E4D7F63C39816275278BBF1EDB86DA04A9812220B573AA143FABF8AD063731AB83BC6ED7E1ACE2B2197C737644203FCB4E33AE494435E6D1C807; ic_tag_manager=UAT; screenerBackUrl=/screener/stocks; screenerBackUrlStocks=/screener/stocks; _ga_9T4RBK8XLD=GS2.1.s1793229336$o7$g1$t1793229339$j57$l0$h0; _ga_ZT9VQEWD4N=GS2.1.s1793229331$o8$g1$t1793229339$j52$l0$h0; _awl=2.1793229339.5-04734e2ca099941e45dbb340aa463f83-6763652d6575726f70652d7765737431-0"
 
 finnhub_client = finnhub.Client(api_key=FINNHUB_API_KEY)
@@ -92,7 +91,7 @@ def scan_and_alert():
 
 def run_bot():
     print("🔥 Starting Bot Thread...", file=sys.stderr, flush=True)
-    send_telegram_alert("🚀 <b>تم تشغيل السيرفر بنجاح (بالفلاتر الجديدة)!</b>\nالبوت بدأ بفحص الأسهم الآن...")
+    send_telegram_alert("🚀 <b>تم تشغيل السيرفر بنجاح (بالتوكن الآمن)!</b>\nالبوت بدأ بفحص الأسهم الآن...")
     
     while True:
         scan_and_alert()
