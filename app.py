@@ -2,7 +2,7 @@ from flask import Flask
 import threading
 import requests
 import finnhub
-import yfinance as yf
+from finvizfinance.screener.overview import Overview
 from datetime import datetime, timedelta
 import time
 import os
@@ -19,13 +19,6 @@ FINNHUB_API_KEY = os.environ.get("FINNHUB_API_KEY", "dbguue9r01qjpoc3bgogdbguue9
 
 finnhub_client = finnhub.Client(api_key=FINNHUB_API_KEY)
 
-# قائمة أسهم نشطة (البوت راح يفحصها كلها بدون ما ينحظر)
-WATCHLIST = [
-    'SOFI', 'MARA', 'RIOT', 'SNDL', 'TLRY', 'PLUG', 'FCEL', 'CLOV', 
-    'WKHS', 'BBAI', 'SPCE', 'OPEN', 'CHPT', 'LCID', 'NIO', 'MULN', 
-    'FFIE', 'SNAP', 'AMD', 'TSLA', 'NVDA', 'AAPL', 'PLTR', 'COIN'
-]
-
 def send_telegram_alert(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "HTML"}
@@ -35,51 +28,53 @@ def send_telegram_alert(message):
         print(f"Telegram Error: {e}", file=sys.stderr, flush=True)
 
 def scan_stocks():
-    print(f"\n⏳ [{datetime.now().strftime('%H:%M:%S')}] جاري فحص قائمة الأسهم...", file=sys.stderr, flush=True)
+    print(f"\n⏳ [{datetime.now().strftime('%H:%M:%S')}] جاري مسح السوق بالكامل عبر Finviz...", file=sys.stderr, flush=True)
     
-    for ticker in WATCHLIST:
-        try:
-            # جلب بيانات 5 دقائق لحساب RSI و VWAP
-            stock = yf.Ticker(ticker)
-            hist = stock.history(period="1d", interval="5m")
-            
-            if hist.empty or len(hist) < 15:
-                continue
+    try:
+        # إعداد الفلاتر (نفس شروطك)
+        screener = Overview()
+        filters_dict = {
+            'Price': 'Under $15',
+            'Average Volume': 'Over 500K',
+            'Float': 'Under 50M',
+            'Relative Volume': 'Over 2',
+            'RSI (14)': '50 to 65',
+            '20-Day Simple Moving Average': 'Price above SMA20'
+        }
+        screener.set_filter(filters_dict=filters_dict)
+        
+        # سحب النتائج
+        df = screener.screener_view()
+        
+        if df is None or df.empty:
+            print("⚠️ لا توجد أسهم تطابق الشروط حالياً.", file=sys.stderr, flush=True)
+            return
+
+        tickers = df['Ticker'].tolist()
+        print(f"🎯 تم العثور على {len(tickers)} سهم: {', '.join(tickers)}", file=sys.stderr, flush=True)
+        
+        for ticker in tickers:
+            try:
+                # جلب السعر اللحظي والخبر من Finnhub
+                quote = finnhub_client.quote(ticker)
+                current_price = quote.get('c') 
+                prev_close = quote.get('pc')  
+                day_low = quote.get('l')      
                 
-            current_price = hist['Close'].iloc[-1]
-            closes = hist['Close'].tolist()
-            
-            # حساب RSI
-            deltas = [closes[i] - closes[i-1] for i in range(1, len(closes))]
-            gains = [d if d > 0 else 0 for d in deltas]
-            losses = [-d if d < 0 else 0 for d in deltas]
-            avg_gain = sum(gains[-14:]) / 14 if len(gains) >= 14 else 0
-            avg_loss = sum(losses[-14:]) / 14 if len(losses) >= 14 else 0
-            rs = avg_gain / avg_loss if avg_loss > 0 else 100
-            rsi = 100 - (100 / (1 + rs))
-            
-            # حساب VWAP
-            typical_prices = (hist['High'] + hist['Low'] + hist['Close']) / 3
-            vwap = (typical_prices * hist['Volume']).cumsum().iloc[-1] / hist['Volume'].cumsum().iloc[-1]
-            
-            # شروط الدخول (السعر أقل من 20$، فوق VWAP، ومؤشر RSI بين 50 و 70)
-            if (0.50 <= current_price <= 20.00 and 
-                current_price > vwap and 
-                50 <= rsi <= 70):
+                if not current_price or current_price == 0: continue
+                    
+                change_pct = ((current_price - prev_close) / prev_close) * 100 if prev_close else 0
                 
-                # جلب الخبر من Finnhub
-                news = finnhub_client.company_news(ticker, _from=(datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d'), to=datetime.now().strftime('%Y-%m-%d'))
-                latest_news = news[0]['headline'] if news else "لا توجد أخبار حديثة"
-                
-                stop_loss = min(vwap, hist['Low'].tail(3).min()) * 0.99 
+                stop_loss = max(current_price * 0.96, day_low * 0.99) 
                 target_1 = current_price * 1.05
                 target_2 = current_price * 1.10
                 
+                news = finnhub_client.company_news(ticker, _from=(datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d'), to=datetime.now().strftime('%Y-%m-%d'))
+                latest_news = news[0]['headline'] if news else "لا توجد أخبار حديثة"
+                
                 alert_msg = (
-                    f"🎯 <b>فرصة: {ticker}</b> 🎯\n\n"
-                    f"💵 <b>السعر:</b> ${current_price:.2f}\n"
-                    f"⚡ <b>RSI:</b> {rsi:.1f}\n"
-                    f"🌊 <b>فوق VWAP:</b> نعم (${vwap:.2f})\n"
+                    f"🎯 <b>فرصة زخم: {ticker}</b> 🎯\n\n"
+                    f"💵 <b>السعر:</b> ${current_price:.2f} ({change_pct:.1f}%)\n"
                     f"📰 <b>الخبر:</b> {latest_news}\n"
                     f"-------------------------\n"
                     f"🟢 <b>دخول:</b> ${current_price:.2f}\n"
@@ -89,12 +84,14 @@ def scan_stocks():
                 )
                 print(f"✅ تم إرسال {ticker}", file=sys.stderr, flush=True)
                 send_telegram_alert(alert_msg)
-        except Exception as e:
-            pass
+            except Exception as e:
+                print(f"Error processing {ticker}: {e}", file=sys.stderr, flush=True)
+    except Exception as e:
+        print(f"Error in screener: {e}", file=sys.stderr, flush=True)
 
 def run_bot():
-    print("🔥 Starting Bot Thread...", file=sys.stderr, flush=True)
-    send_telegram_alert("🚀 <b>تم تشغيل الماسح الجديد (بدون Finviz)!</b>\nالبوت بدأ بفحص قائمة الأسهم النشطة الآن...")
+    print("🔥 Starting Dynamic Scanner...", file=sys.stderr, flush=True)
+    send_telegram_alert("🚀 <b>تم تشغيل الماسح الديناميكي!</b>\nالبوت بدأ بمسح السوق بحثاً عن الزخم...")
     
     while True:
         scan_stocks()
@@ -102,7 +99,7 @@ def run_bot():
 
 @app.route('/')
 def home():
-    return "Scanner is Running 24/7!"
+    return "Dynamic Scanner is Running 24/7!"
 
 @app.route('/test')
 def test_scan():
